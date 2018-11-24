@@ -1,0 +1,170 @@
+---
+title: "Active Learning and Classroom"
+author: "Yaoxiang Li"
+date: "11/24/2018"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r clean_data, include=FALSE}
+#' Cleaning Feature set one by feature reference table.
+#' using the following code to install the dependencies:
+#' install.packages("readxl")
+#'
+#' @param feature_set_1 R dataframe saving data
+#' 
+#' License: GPL (>= 3)
+#' @export
+clean_feature_set_one = function(feature_set_1) {
+    require(readxl)
+    
+    url = "https://github.com/lzyacht/active/blob/master/data/feature_ref.xlsx?raw=true"
+    destfile = "feature_ref.xlsx"
+    curl::curl_download(url, destfile)
+    al_type = read_excel(destfile, sheet = "al_type")
+    sex = read_excel(destfile, sheet = "sex")
+    usefulness = read_excel(destfile, sheet = "usefulness")
+    convience = read_excel(destfile, sheet = "convience")
+    temp = read_excel(destfile, sheet = "temp")
+    light = read_excel(destfile, sheet = "light")
+    teacher_voice = read_excel(destfile, sheet = "teacher_voice")
+    legibility = read_excel(destfile, sheet = "legibility")
+    room_size = read_excel(destfile, sheet = "room_size")
+    room_crowd = read_excel(destfile, sheet = "room_crowd")
+    teacher_dist = read_excel(destfile, sheet = "teacher_dist")
+    student_dist = read_excel(destfile, sheet = "student_dist")
+    atmosphere = read_excel(destfile, sheet = "atmosphere")
+    express = read_excel(destfile, sheet = "express")
+    communication = read_excel(destfile, sheet = "communication")
+    ownership = read_excel(destfile, sheet = "ownership")
+    contribution = read_excel(destfile, sheet = "contribution")
+    motivation = read_excel(destfile, sheet = "motivation")
+    lesson_care = read_excel(destfile, sheet = "lesson_care")
+    attention_easy = read_excel(destfile, sheet = "attention_easy")
+    tired_easy = read_excel(destfile, sheet = "tired_easy")
+    cool_al = read_excel(destfile, sheet = "cool_al")
+    ict_plenty = read_excel(destfile, sheet = "ict_plenty")
+    chair_easy = read_excel(destfile, sheet = "chair_easy")
+    ceil_height = read_excel(destfile, sheet = "ceil_height")
+
+    for (i in 1:nrow(feature_set_1)){
+        feature_set_1$sex[i] = sex$number[which(feature_set_1$sex[i] == sex$name)]
+        feature_set_1$usefulness[i] = usefulness$number[which(feature_set_1$usefulness[i] == usefulness$name)]
+        feature_set_1$convience[i] = convience$number[which(feature_set_1$convience[i] == convience$name)]
+        feature_set_1$temp[i] = temp$number[which(feature_set_1$temp[i] == temp$name)]
+        feature_set_1$light[i] = light$number[which(feature_set_1$light[i] == light$name)]
+        feature_set_1$teacher_voice[i] = teacher_voice$number[which(feature_set_1$teacher_voice[i] == teacher_voice$name)]
+        feature_set_1$legibility[i] = legibility$number[which(feature_set_1$legibility[i] == legibility$name)]
+        feature_set_1$room_size[i] = room_size$number[which(feature_set_1$room_size[i] == room_size$name)]
+        feature_set_1$room_crowd[i] = room_crowd$number[which(feature_set_1$room_crowd[i] == room_crowd$name)]
+        feature_set_1$teacher_dist[i] = teacher_dist$number[which(feature_set_1$teacher_dist[i] == teacher_dist$name)]
+        feature_set_1$student_dist[i] = student_dist$number[which(feature_set_1$student_dist[i] == student_dist$name)]
+        feature_set_1$atmosphere[i] = atmosphere$number[which(feature_set_1$atmosphere[i] == atmosphere$name)]
+        feature_set_1$express[i] = express$number[which(feature_set_1$express[i] == express$name)]
+        feature_set_1$communication[i] = communication$number[which(feature_set_1$communication[i] == communication$name)]
+        feature_set_1$ownership[i] = ownership$number[which(feature_set_1$ownership[i] == ownership$name)]
+        feature_set_1$contribution[i] = contribution$number[which(feature_set_1$contribution[i] == contribution$name)]
+        feature_set_1$motivation[i] = motivation$number[which(feature_set_1$motivation[i] == motivation$name)]
+        feature_set_1$lesson_care[i] = lesson_care$number[which(feature_set_1$lesson_care[i] == lesson_care$name)]
+        feature_set_1$attention_easy[i] = attention_easy$number[which(feature_set_1$attention_easy[i] == attention_easy$name)]
+        feature_set_1$tired_easy[i] = tired_easy$number[which(feature_set_1$tired_easy[i] == tired_easy$name)]
+        feature_set_1$cool_al[i] = cool_al$number[which(feature_set_1$cool_al[i] == cool_al$name)]
+        feature_set_1$ict_plenty[i] = ict_plenty$number[which(feature_set_1$ict_plenty[i] == ict_plenty$name)]
+        feature_set_1$chair_easy[i] = chair_easy$number[which(feature_set_1$chair_easy[i] == chair_easy$name)]
+        feature_set_1$ceil_height[i] = ceil_height$number[which(feature_set_1$ceil_height[i] == ceil_height$name)]
+    }
+    
+    return(feature_set_1)
+}
+
+```
+
+
+## Load and clean feature set one data
+
+```{r load and clean feature set one data}
+library(readxl)
+url = "https://github.com/lzyacht/active/blob/master/data/feature_set_1.xlsx?raw=true"
+destfile = "feature_set_1.xlsx"
+curl::curl_download(url, destfile)
+feature_set_1 = read_excel(destfile)
+feature_set_1_num = clean_feature_set_one(feature_set_1)
+```
+
+## Descriptive statistics
+
+```{r}
+library(Hmisc)
+describe(feature_set_1)
+describe(feature_set_1_num) 
+```
+
+```{r scatter plot of convience usefulness}
+library(ggplot2)
+ggplot(feature_set_1_num, aes(y=convience, x=usefulness)) + geom_point()
+```
+
+## Multiple (Linear) Regression
+
+```{r Multiple}
+cared_vars = c("usefulness", "sex", "temp", "light", "teacher_voice",
+               "legibility", "room_size", "room_crowd",
+               "teacher_dist", "student_dist", "atmosphere",
+               "express", "communication", "ownership",
+               "contribution", "motivation", "lesson_care",
+               "attention_easy", "tired_easy", "cool_al",
+               "ict_plenty", "chair_easy", "ceil_height")
+
+model_data = feature_set_1_num[, colnames(feature_set_1_num) %in% cared_vars]
+model_data = as.data.frame(apply(model_data, 2, as.numeric))
+```
+
+
+## Model selection
+
+```{r}
+library(MASS)
+
+fit <- lm(usefulness ~ sex + temp + light + teacher_voice +
+                       legibility + room_size + room_crowd +
+                       teacher_dist + student_dist + atmosphere +
+                       express + communication + ownership + 
+                       contribution + motivation + lesson_care +
+                       attention_easy + tired_easy + cool_al +
+                       ict_plenty + chair_easy + ceil_height,
+          data=model_data)
+step <- stepAIC(fit, direction="both")
+step$anova # display results
+summary(fit) # show results
+summary(step)
+cor(model_data)
+```
+
+
+
+## Selected model
+```{r AIC selected}
+# install.packages("stargazer")
+library(stargazer)
+fit3 <- lm(usefulness ~ temp + light + teacher_voice + legibility +
+               room_size + room_crowd + student_dist + atmosphere +
+               express + communication + ownership + contribution +
+               lesson_care + attention_easy + tired_easy + ict_plenty +
+               chair_easy + ceil_height,
+           data=model_data)
+summary(fit3) # show results
+
+
+stargazer::stargazer(fit3, type = "html",
+ title = "Table with model selected by AIC multipule regression")
+
+```
+
+
+
+
