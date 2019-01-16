@@ -1,0 +1,205 @@
+---
+title: "Active Learning and Classroom"
+output:
+  html_document:
+    df_print: paged
+---
+
+## Install and load packages
+
+```{r load packages}
+# Only install packages which do not exist
+list_of_packages <- c("tidyverse", "MASS", "Hmisc", "car")
+new_packages <- list_of_packages[!(list_of_packages %in% installed.packages()[,"Package"])]
+if(length(new_packages)) install.packages(new_packages)
+
+library(tidyverse)
+library(MASS)
+library(Hmisc)
+```
+
+# Define plotting
+
+```{r 1}
+# Create functions for saving Histogram with mean line and density plot
+hist_line_den_plot = function (df, x, mean_line, file_name) {
+    p = ggplot2::ggplot(df, ggplot2::aes_string(x=x)) + # tricky part using aes_string, even for x=deparse(substitute(x))
+        ggplot2::geom_histogram(ggplot2::aes(y=..density..), color="black", fill="white", binwidth=.3) +
+        ggplot2::geom_vline(ggplot2::aes(xintercept=mean_line), color="blue", linetype="dashed", size=1) +
+        ggplot2::geom_density(alpha=.2, fill="#FF6666")
+    ggplot2::ggsave(filename = file_name, plot = p, device = "png", dpi = 300)
+    return(p)
+}
+save_hist_line_den_plot = function (data, col_name) {
+    mean_cat = sum(data[col_name]) / nrow(data)
+    if(!dir.exists("image")) {
+        dir.create("image")
+    }
+    hist_line_den_plot(data, col_name, mean_cat, paste0("image/", col_name, "_normalized.png"))
+}
+```
+
+# Load data
+
+```{r 2}
+library(tidyverse)
+# Load the raw questionnaire data
+data = readr::read_csv("https://raw.githubusercontent.com/lzyacht/active/master/data/Data0115.csv")
+cats = colnames(data)[3:ncol(data)] # cats represents for catgories
+cats = cats[-which(cats== "sex")]
+data_normalized <- data %>% mutate_each_(funs(scale(.) %>% as.vector), vars=cats)
+# Head of the questionnaire data
+data %>% print(n=10, width=Inf)
+
+```
+
+# Descriptive statistics
+
+```{r 3}
+library(Hmisc)
+for (cat in colnames(data)){
+    print(describe(data[cat]))
+}
+
+```
+
+# Histogram with mean line and density plot
+
+```{r 4, eval = FALSE}
+
+
+# for (cat in cats) {
+#     save_hist_line_den_plot(data, cat)
+# }
+# for (cat in cats) {
+#     save_hist_line_den_plot(data_normalized, cat)
+# }
+```
+
+# T-Test For Useful versus Useless
+
+```{r 5}
+data$usefulness_group = rep(NA, nrow(data))
+data$usefulness_group[data$usefulness >= mean(as.numeric(data$usefulness))] = "Useful"
+data$usefulness_group[data$usefulness < mean(as.numeric(data$usefulness))] = "Useless"
+
+
+x = data[data$usefulness_group == "Useful", ]
+y = data[data$usefulness_group == "Useless", ]
+
+for (cat in cats) {
+    print(paste0("T-test for ", cat, ":"))
+    print(t.test(unlist(x[cat]) , unlist(y[cat])))
+}
+
+```
+
+# T-Test For Convience and Inconvenience
+
+```{r 6}
+data$convience_group = rep(NA, nrow(data))
+data$convience_group[data$convience >= mean(as.numeric(data$convience))] = "Convience"
+data$convience_group[data$convience < mean(as.numeric(data$convience))] = "Inconvenience"
+
+
+x = data[data$convience_group == "Convience", ]
+y = data[data$convience_group == "Inconvenience", ]
+
+for (cat in cats) {
+    print(paste0("T-test for ", cat, ":"))
+    print(t.test(unlist(x[cat]) , unlist(y[cat])))
+}
+
+```
+
+# Muiltiple Linear regression for Usefulness
+
+```{r 7}
+library(MASS)
+model_data = as.data.frame(apply(data, 2, as.numeric))
+fit = lm(usefulness ~ seat_pos + temp + light + lesson_care + room_size + room_crowd +
+             chair_easy + teacher_voice + teacher_dist + legibility + attention_easy +
+             tired_easy + cool_al + atmosphere + student_dist + express + communication +
+             ownership + contribution + motivation + ict_plenty, data = model_data)
+library(car)
+library(plyr)
+# Calculating VIF for each independent variable
+vif(fit)
+
+# Set a VIF threshold. All the variables having higher VIF than threshold
+#are dropped from the model
+threshold=2.5
+
+# Sequentially drop the variable with the largest VIF until
+# all variables have VIF less than threshold
+drop=TRUE
+
+aftervif=data.frame()
+while(drop==TRUE) {
+  vfit=vif(fit)
+  aftervif=rbind.fill(aftervif,as.data.frame(t(vfit)))
+  if(max(vfit)>threshold) { fit=
+  update(fit,as.formula(paste(".","~",".","-",names(which.max(vfit))))) }
+  else { drop=FALSE }}
+
+# Model after removing correlated Variables
+print(fit)
+
+# How variables removed sequentially
+t_aftervif= as.data.frame(t(aftervif))
+# edit(t_aftervif)
+
+
+step <- stepAIC(fit, direction="both")
+step$anova # display results
+summary(fit) # show results
+summary(step)
+
+# cor(model_data)
+```
+
+# Muiltiple Linear regression for Convience
+
+```{r 8}
+library(MASS)
+
+fit = lm(convience ~ seat_pos + temp + light + lesson_care + room_size + room_crowd +
+             chair_easy + teacher_voice + teacher_dist + legibility + attention_easy +
+             tired_easy + cool_al + atmosphere + student_dist + express + communication +
+             ownership + contribution + motivation + ict_plenty, data = model_data)
+
+# install.packages("car")
+library(car)
+# Calculating VIF for each independent variable
+vif(fit)
+
+# Set a VIF threshold. All the variables having higher VIF than threshold
+#are dropped from the model
+threshold=2.5
+
+# Sequentially drop the variable with the largest VIF until
+# all variables have VIF less than threshold
+drop=TRUE
+
+aftervif=data.frame()
+while(drop==TRUE) {
+  vfit=vif(fit)
+  aftervif=rbind.fill(aftervif,as.data.frame(t(vfit)))
+  if(max(vfit)>threshold) { fit=
+  update(fit,as.formula(paste(".","~",".","-",names(which.max(vfit))))) }
+  else { drop=FALSE }}
+
+# Model after removing correlated Variables
+print(fit)
+
+# How variables removed sequentially
+t_aftervif= as.data.frame(t(aftervif))
+# edit(t_aftervif)
+
+step <- stepAIC(fit, direction="both")
+step$anova # display results
+summary(fit) # show results
+summary(step)
+# cor(model_data)
+
+```
